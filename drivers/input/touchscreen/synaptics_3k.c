@@ -246,8 +246,6 @@ static irqreturn_t synaptics_irq_thread(int irq, void *ptr);
 
 extern unsigned int get_tamper_sf(void);
 
-static struct input_dev *smart_cover;
-
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 #define S2W_Y_MAX 2880
 #define S2W_X_MAX 1920
@@ -331,7 +329,6 @@ static void detect_sweep2wake(int x, int y)
 	}
 }
 #endif
-
 
 static void syn_page_select(struct i2c_client *client, uint8_t page)
 {
@@ -1935,34 +1932,6 @@ static void synaptics_touch_sysfs_remove(void)
 	sysfs_remove_file(android_touch_kobj, &dev_attr_sweep2wake.attr);
 #endif
 	kobject_del(android_touch_kobj);
-}
-
-static int smart_cover_device_create(void){
-	int err = 0;
-
-	smart_cover = input_allocate_device();
-	if (!smart_cover) {
-		err = -ENOMEM;
-		goto exit;
-	}
-
-	smart_cover->name = "smartcover";
-	smart_cover->phys = "/dev/input/smartcover";
-
-	set_bit(EV_SW, smart_cover->evbit);
-	set_bit(SW_LID, smart_cover->swbit);
-
-	err = input_register_device(smart_cover);
-	if (err) {
-		goto exit_free;
-	}
-	return 0;
-
-exit_free:
-	input_free_device(smart_cover);
-	smart_cover = NULL;
-exit:
-	return err;
 }
 
 static int synaptics_init_panel(struct synaptics_ts_data *ts)
@@ -4424,13 +4393,11 @@ static void __devinit synaptics_ts_init_async(void *unused, async_cookie_t cooki
 static int __devinit synaptics_ts_init(void)
 {
 	async_schedule(synaptics_ts_init_async, NULL);
-	smart_cover_device_create();
 	return 0;
 }
 static void __exit synaptics_ts_exit(void)
 {
 	i2c_del_driver(&synaptics_ts_driver);
-	input_unregister_device(smart_cover);
 }
 module_init(synaptics_ts_init);
 module_exit(synaptics_ts_exit);
